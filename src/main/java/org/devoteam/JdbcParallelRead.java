@@ -151,13 +151,12 @@ public class JdbcParallelRead {
 					return mapper.writeValueAsString(arrayNode);
 				})
 				)
-		.apply(MapElements.via(
-				new SimpleFunction<String, String>() {
-					@Override
-					public String apply(String line) {
-						return "Line: " + line.length();
-					}
-				}))
+				/*
+				 * .apply(MapElements.via( new SimpleFunction<String, String>() {
+				 * 
+				 * @Override public String apply(String line) { return "Line: " + line.length();
+				 * } }))
+				 */
 		 .apply("WriteCounts", TextIO.write().to(options.getOutput()));
 		;
 
