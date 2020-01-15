@@ -64,6 +64,9 @@ public static void main(String[] args) throws PropertyVetoException {
         PipelineOptionsFactory.fromArgs(args).withValidation().create());
     String tableName = "employees";
     int fetchSize = 1000;
+    
+    System.out.println(" --- toto");
+    
 //    Create range index chunks Pcollection
     PCollection<KV<String,Iterable<Integer>>> ranges =
             p.apply(String.format("Read from Cloud SQL MySQL: %s",tableName), JdbcIO.<String>read()
