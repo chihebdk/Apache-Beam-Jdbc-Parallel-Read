@@ -46,12 +46,13 @@ import java.sql.ResultSet;
  */
 public class JdbcParallelRead {
   private static final Logger LOG = LoggerFactory.getLogger(JdbcParallelRead.class);
-  public static void main(String[] args) throws PropertyVetoException {
+  @SuppressWarnings("serial")
+public static void main(String[] args) throws PropertyVetoException {
       ComboPooledDataSource dataSource = new ComboPooledDataSource();
       dataSource.setDriverClass("com.mysql.cj.jdbc.Driver");
-      dataSource.setJdbcUrl("jdbc:mysql://google/<DATABASE_NAME>?cloudSqlInstance=<INSTANCE_CONNECTION_NAME>" +
+      dataSource.setJdbcUrl("jdbc:mysql://google/employees?cloudSqlInstance=celtic-list-244219:us-central1:cdf01" +
               "&socketFactory=com.google.cloud.sql.mysql.SocketFactory&useSSL=false" +
-              "&user=<MYSQL_USER_NAME>&password=<MYSQL_USER_PASSWORD>");
+              "&user=cdf01&password=cdf01");
 
 
       dataSource.setMaxPoolSize(10);
@@ -61,13 +62,13 @@ public class JdbcParallelRead {
 
     Pipeline p = Pipeline.create(
         PipelineOptionsFactory.fromArgs(args).withValidation().create());
-    String tableName = "HelloWorld";
+    String tableName = "employees";
     int fetchSize = 1000;
 //    Create range index chunks Pcollection
     PCollection<KV<String,Iterable<Integer>>> ranges =
             p.apply(String.format("Read from Cloud SQL MySQL: %s",tableName), JdbcIO.<String>read()
             .withDataSourceConfiguration(config)
-            .withQuery(String.format("SELECT MAX(`index_id`) from %s", tableName))
+            .withQuery(String.format("SELECT MAX(`emp_no`) from %s", tableName))
             .withRowMapper(new JdbcIO.RowMapper<String>() {
                 public String mapRow(ResultSet resultSet) throws Exception {
                     return resultSet.getString(1);
@@ -117,7 +118,7 @@ public class JdbcParallelRead {
                   }
               })
                       .withOutputParallelization(false)
-              .withQuery(String.format("select * from <DATABASE_NAME>.%s where index_id >= ? and index_id < ?",tableName))
+              .withQuery(String.format("select * from employees.%s where emp_no >= ? and emp_no < ?",tableName))
                       .withRowMapper((JdbcIO.RowMapper<String>) resultSet -> {
                           ObjectMapper mapper = new ObjectMapper();
                           ArrayNode arrayNode = mapper.createArrayNode();
