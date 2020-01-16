@@ -1,4 +1,4 @@
-package org.devoteam;
+package com.slalom.gcp.dataflow.example;
 
 import java.beans.PropertyVetoException;
 import java.sql.PreparedStatement;
@@ -105,7 +105,7 @@ public class JdbcParallelRead {
 				;
 
 
-		ranges.apply(String.format("Read ALL %s", tableName), JdbcIO.<KV<String,Iterable<Integer>>,Map<String, Object>>readAll()
+		ranges.apply(String.format("Read ALL %s", tableName), JdbcIO.<KV<String,Iterable<Integer>>,Map<String, String>>readAll()
 				.withDataSourceConfiguration(config)
 				.withFetchSize(fetchSize)
 				.withParameterSetter(new JdbcIO.PreparedStatementSetter<KV<String,Iterable<Integer>>>() {
@@ -121,8 +121,8 @@ public class JdbcParallelRead {
 				})
 				.withOutputParallelization(false)
 				.withQuery(String.format("select * from employees.%s where emp_no >= ? and emp_no < ?",tableName))
-				.withRowMapper((JdbcIO.RowMapper<Map<String, Object>>) resultSet -> {
-					Map<String, Object> data = new HashMap<>();
+				.withRowMapper((JdbcIO.RowMapper<Map<String, String>>) resultSet -> {
+					Map<String, String> data = new HashMap<>();
 					for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
 	
 						String columnTypeIntKey ="";
@@ -138,22 +138,20 @@ public class JdbcParallelRead {
 				})
 				)
 
-		 .apply("Build Document", MapElements.via(new SimpleFunction<Map<String, Object>, Integer>() {
-             @Override
-             public Integer apply(Map<String, Object> data) {
-					DocumentReference docRef = db.collection("employees").document(String.valueOf(data.get("emp_no")));
-					batch.set(docRef, data);
-                 return data.size();
-             }
-         }))
-		 .apply("Send to Firestore", MapElements.via(
-                 new SimpleFunction<Integer, Integer>() {
-                     @Override
-                     public Integer apply(Integer line) {
-                    	 batch.commit();
-                         return line;
-                     }
-                 }))
+		/*
+		 * .apply("Build Document", MapElements.via(new SimpleFunction<Map<String,
+		 * String>, Integer>() {
+		 * 
+		 * @Override public Integer apply(Map<String, String> data) { DocumentReference
+		 * docRef =
+		 * db.collection("employees").document(String.valueOf(data.get("emp_no")));
+		 * batch.set(docRef, data); return data.size(); } }))
+		 * .apply("Send to Firestore", MapElements.via( new SimpleFunction<Integer,
+		 * Integer>() {
+		 * 
+		 * @Override public Integer apply(Integer line) { batch.commit(); return line; }
+		 * }))
+		 */
 		;
 
 		p.run();
@@ -161,6 +159,7 @@ public class JdbcParallelRead {
 	
 	  public interface JPOptions extends PipelineOptions {
 
+		    /** Set this required option to specify where to write the output. */
 		    @Description("Path of the file to write to")
 		    @Required
 		    String getOutput();
