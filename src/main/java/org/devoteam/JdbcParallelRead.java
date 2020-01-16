@@ -1,63 +1,56 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and ff
- * limitations under the License.
- */
 package org.devoteam;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.mchange.v2.c3p0.ComboPooledDataSource;
+import java.beans.PropertyVetoException;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
-import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.jdbc.JdbcIO;
 import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.Validation.Required;
-import org.apache.beam.sdk.transforms.*;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.GroupByKey;
+import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.beans.PropertyVetoException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.FirestoreOptions;
+import com.google.cloud.firestore.WriteBatch;
+import com.mchange.v2.c3p0.ComboPooledDataSource;
 
-/**
- * <p>To run this starter example using managed resource in Google Cloud
- * Platform, you should specify the following command-line options:
- *   --project=<YOUR_PROJECT_ID>
- *   --stagingLocation=<STAGING_LOCATION_IN_CLOUD_STORAGE>
- *   --runner=DataflowRunner
- *   Example command:
- *   //    mvn compile exec:java -D exec.mainClass=org.devoteam.JdbcParallelRead -D exec.args="--runner=DataflowRunner --project=<YOUR_PROJECT> --region=<YOUR_REGION> --zone=<YOUR_ZONE> --gcpTempLocation=gs://<YOUR_BUCKET>/tmp/"
- */
+
 public class JdbcParallelRead {
+	
 	private static final Logger LOG = LoggerFactory.getLogger(JdbcParallelRead.class);
+	
 	@SuppressWarnings("serial")
 	public static void main(String[] args) throws PropertyVetoException {
+		
+		
 		ComboPooledDataSource dataSource = new ComboPooledDataSource();
 		dataSource.setDriverClass("com.mysql.cj.jdbc.Driver");
 		dataSource.setJdbcUrl("jdbc:mysql://google/employees?cloudSqlInstance=celtic-list-244219:us-central1:cdf01" +
 				"&socketFactory=com.google.cloud.sql.mysql.SocketFactory&useSSL=false" +
 				"&user=cdf01&password=cdf01");
+
+		
+	    FirestoreOptions firestoreOptions =
+	        FirestoreOptions.getDefaultInstance().toBuilder()
+	            .setProjectId("celtic-list-244219")
+	            .build();
+	    
+	    Firestore db = firestoreOptions.getService();
 
 
 		dataSource.setMaxPoolSize(10);
@@ -69,11 +62,10 @@ public class JdbcParallelRead {
 		        PipelineOptionsFactory.fromArgs(args).withValidation().as(JPOptions.class);
 		
 		Pipeline p = Pipeline.create(options);
-		
+		WriteBatch batch = db.batch();
+
 		String tableName = "employees";
 		int fetchSize = 1000;
-
-		LOG.info(" ********* STARTED **************");
 
 		//    Create range index chunks Pcollection
 		PCollection<KV<String,Iterable<Integer>>> ranges =
@@ -113,10 +105,9 @@ public class JdbcParallelRead {
 				;
 
 
-		ranges.apply(String.format("Read ALL %s", tableName), JdbcIO.<KV<String,Iterable<Integer>>,String>readAll()
+		ranges.apply(String.format("Read ALL %s", tableName), JdbcIO.<KV<String,Iterable<Integer>>,Map<String, Object>>readAll()
 				.withDataSourceConfiguration(config)
 				.withFetchSize(fetchSize)
-				.withCoder(StringUtf8Coder.of())
 				.withParameterSetter(new JdbcIO.PreparedStatementSetter<KV<String,Iterable<Integer>>>() {
 					@Override
 
@@ -130,34 +121,39 @@ public class JdbcParallelRead {
 				})
 				.withOutputParallelization(false)
 				.withQuery(String.format("select * from employees.%s where emp_no >= ? and emp_no < ?",tableName))
-				.withRowMapper((JdbcIO.RowMapper<String>) resultSet -> {
-					ObjectMapper mapper = new ObjectMapper();
-					ArrayNode arrayNode = mapper.createArrayNode();
+				.withRowMapper((JdbcIO.RowMapper<Map<String, Object>>) resultSet -> {
+					Map<String, Object> data = new HashMap<>();
 					for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
+	
 						String columnTypeIntKey ="";
 						try {
-							ObjectNode objectNode = mapper.createObjectNode();
-							objectNode.put("column_name",
-									resultSet.getMetaData().getColumnName(i));
-
-							objectNode.put("value",
-									resultSet.getString(i));
-							arrayNode.add(objectNode);
+							data.put(resultSet.getMetaData().getColumnName(i), resultSet.getString(i));
 						} catch (Exception e) {
 							LOG.error("problem columnTypeIntKey: " +  columnTypeIntKey);
 							throw e;
 						}
 					}
-					return mapper.writeValueAsString(arrayNode);
+
+					return data;
 				})
 				)
-				/*
-				 * .apply(MapElements.via( new SimpleFunction<String, String>() {
-				 * 
-				 * @Override public String apply(String line) { return "Line: " + line.length();
-				 * } }))
-				 */
-		 .apply("WriteCounts", TextIO.write().to(options.getOutput()));
+
+		 .apply("Build Document", MapElements.via(new SimpleFunction<Map<String, Object>, Integer>() {
+             @Override
+             public Integer apply(Map<String, Object> data) {
+					DocumentReference docRef = db.collection("employees").document(String.valueOf(data.get("emp_no")));
+					batch.set(docRef, data);
+                 return data.size();
+             }
+         }))
+		 .apply("Send to Firestore", MapElements.via(
+                 new SimpleFunction<Integer, Integer>() {
+                     @Override
+                     public Integer apply(Integer line) {
+                    	 batch.commit();
+                         return line;
+                     }
+                 }))
 		;
 
 		p.run();
@@ -165,7 +161,6 @@ public class JdbcParallelRead {
 	
 	  public interface JPOptions extends PipelineOptions {
 
-		    /** Set this required option to specify where to write the output. */
 		    @Description("Path of the file to write to")
 		    @Required
 		    String getOutput();
