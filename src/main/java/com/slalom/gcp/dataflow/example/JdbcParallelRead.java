@@ -162,7 +162,9 @@ public class JdbcParallelRead {
 				Firestore db = firestoreOptions.getService();
 
 				DocumentReference docRef =
-						 db.collection("employees").document(String.valueOf(Math.random()));
+						 db.collection("employees").document("Name_" + String.valueOf(Math.random()));
+				
+				LOG.info(" thsis is data : " + data);
 				
 				ApiFuture<WriteResult> result = docRef.set(data);
 				
