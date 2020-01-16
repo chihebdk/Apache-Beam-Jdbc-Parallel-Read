@@ -92,16 +92,10 @@
 			<version>${beam.version}</version>
 		</dependency>
 
-		<!-- By default, the starter project has a dependency on the Beam DirectRunner 
-			to enable development and testing of pipelines. To run on another of the 
-			Beam runners, add its module to this pom.xml according to the runner-specific 
-			setup instructions on the Beam website: http://beam.apache.org/documentation/#runners -->
-
 		<dependency>
 			<groupId>com.google.auto.value</groupId>
 			<artifactId>auto-value</artifactId>
-			<version>1.2</version>
-		</dependency>
+			</dependency>
 
 		<dependency>
 			<groupId>org.apache.beam</groupId>
