@@ -56,14 +56,6 @@ public class JdbcParallelRead {
 				"&socketFactory=com.google.cloud.sql.mysql.SocketFactory&useSSL=false" +
 				"&user=cdf01&password=cdf01");
 
-		
-	    FirestoreOptions firestoreOptions =
-	        FirestoreOptions.getDefaultInstance().toBuilder()
-	            .setProjectId("celtic-list-244219")
-	            .build();
-	    
-	    Firestore db = firestoreOptions.getService();
-
 
 		dataSource.setMaxPoolSize(10);
 		dataSource.setInitialPoolSize(6);
@@ -74,7 +66,6 @@ public class JdbcParallelRead {
 		        PipelineOptionsFactory.fromArgs(args).withValidation().as(JPOptions.class);
 		
 		Pipeline p = Pipeline.create(options);
-		WriteBatch batch = db.batch();
 
 		String tableName = "employees";
 		int fetchSize = 1000;
@@ -163,6 +154,13 @@ public class JdbcParallelRead {
 		
 			@Override public String apply(String data) { 
 			
+				FirestoreOptions firestoreOptions =
+			        FirestoreOptions.getDefaultInstance().toBuilder()
+			            .setProjectId("celtic-list-244219")
+			            .build();
+					    
+				Firestore db = firestoreOptions.getService();
+
 				DocumentReference docRef =
 						 db.collection("employees").document(String.valueOf(Math.random()));
 				
