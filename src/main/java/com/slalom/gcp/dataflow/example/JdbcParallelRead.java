@@ -1,56 +1,45 @@
 package com.slalom.gcp.dataflow.example;
-
-import java.beans.PropertyVetoException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.HashMap;
-import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.mchange.v2.c3p0.ComboPooledDataSource;
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
+import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.jdbc.JdbcIO;
 import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.Validation.Required;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.GroupByKey;
-import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.SimpleFunction;
+import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.FirestoreOptions;
-import com.google.cloud.firestore.WriteBatch;
-import com.mchange.v2.c3p0.ComboPooledDataSource;
+import java.beans.PropertyVetoException;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
-
+/**
+ * <p>To run this starter example using managed resource in Google Cloud
+ * Platform, you should specify the following command-line options:
+ *   --project=<YOUR_PROJECT_ID>
+ *   --stagingLocation=<STAGING_LOCATION_IN_CLOUD_STORAGE>
+ *   --runner=DataflowRunner
+ *   Example command:
+ *   //    mvn compile exec:java -D exec.mainClass=org.devoteam.JdbcParallelRead -D exec.args="--runner=DataflowRunner --project=<YOUR_PROJECT> --region=<YOUR_REGION> --zone=<YOUR_ZONE> --gcpTempLocation=gs://<YOUR_BUCKET>/tmp/"
+ */
 public class JdbcParallelRead {
-	
 	private static final Logger LOG = LoggerFactory.getLogger(JdbcParallelRead.class);
-	
 	@SuppressWarnings("serial")
 	public static void main(String[] args) throws PropertyVetoException {
-		
-		
 		ComboPooledDataSource dataSource = new ComboPooledDataSource();
 		dataSource.setDriverClass("com.mysql.cj.jdbc.Driver");
 		dataSource.setJdbcUrl("jdbc:mysql://google/employees?cloudSqlInstance=celtic-list-244219:us-central1:cdf01" +
 				"&socketFactory=com.google.cloud.sql.mysql.SocketFactory&useSSL=false" +
 				"&user=cdf01&password=cdf01");
-
-		
-	    FirestoreOptions firestoreOptions =
-	        FirestoreOptions.getDefaultInstance().toBuilder()
-	            .setProjectId("celtic-list-244219")
-	            .build();
-	    
-	    Firestore db = firestoreOptions.getService();
 
 
 		dataSource.setMaxPoolSize(10);
@@ -62,10 +51,11 @@ public class JdbcParallelRead {
 		        PipelineOptionsFactory.fromArgs(args).withValidation().as(JPOptions.class);
 		
 		Pipeline p = Pipeline.create(options);
-		WriteBatch batch = db.batch();
-
+		
 		String tableName = "employees";
 		int fetchSize = 1000;
+
+		LOG.info(" ********* STARTED **************");
 
 		//    Create range index chunks Pcollection
 		PCollection<KV<String,Iterable<Integer>>> ranges =
@@ -105,9 +95,10 @@ public class JdbcParallelRead {
 				;
 
 
-		ranges.apply(String.format("Read ALL %s", tableName), JdbcIO.<KV<String,Iterable<Integer>>,Map<String, String>>readAll()
+		ranges.apply(String.format("Read ALL %s", tableName), JdbcIO.<KV<String,Iterable<Integer>>,String>readAll()
 				.withDataSourceConfiguration(config)
 				.withFetchSize(fetchSize)
+				.withCoder(StringUtf8Coder.of())
 				.withParameterSetter(new JdbcIO.PreparedStatementSetter<KV<String,Iterable<Integer>>>() {
 					@Override
 
@@ -121,37 +112,34 @@ public class JdbcParallelRead {
 				})
 				.withOutputParallelization(false)
 				.withQuery(String.format("select * from employees.%s where emp_no >= ? and emp_no < ?",tableName))
-				.withRowMapper((JdbcIO.RowMapper<Map<String, String>>) resultSet -> {
-					Map<String, String> data = new HashMap<>();
+				.withRowMapper((JdbcIO.RowMapper<String>) resultSet -> {
+					ObjectMapper mapper = new ObjectMapper();
+					ArrayNode arrayNode = mapper.createArrayNode();
 					for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
-	
 						String columnTypeIntKey ="";
 						try {
-							data.put(resultSet.getMetaData().getColumnName(i), resultSet.getString(i));
+							ObjectNode objectNode = mapper.createObjectNode();
+							objectNode.put("column_name",
+									resultSet.getMetaData().getColumnName(i));
+
+							objectNode.put("value",
+									resultSet.getString(i));
+							arrayNode.add(objectNode);
 						} catch (Exception e) {
 							LOG.error("problem columnTypeIntKey: " +  columnTypeIntKey);
 							throw e;
 						}
 					}
-
-					return data;
+					return mapper.writeValueAsString(arrayNode);
 				})
 				)
-
-		/*
-		 * .apply("Build Document", MapElements.via(new SimpleFunction<Map<String,
-		 * String>, Integer>() {
-		 * 
-		 * @Override public Integer apply(Map<String, String> data) { DocumentReference
-		 * docRef =
-		 * db.collection("employees").document(String.valueOf(data.get("emp_no")));
-		 * batch.set(docRef, data); return data.size(); } }))
-		 * .apply("Send to Firestore", MapElements.via( new SimpleFunction<Integer,
-		 * Integer>() {
-		 * 
-		 * @Override public Integer apply(Integer line) { batch.commit(); return line; }
-		 * }))
-		 */
+				/*
+				 * .apply(MapElements.via( new SimpleFunction<String, String>() {
+				 * 
+				 * @Override public String apply(String line) { return "Line: " + line.length();
+				 * } }))
+				 */
+		 .apply("WriteCounts", TextIO.write().to(options.getOutput()));
 		;
 
 		p.run();
@@ -167,4 +155,3 @@ public class JdbcParallelRead {
 		    void setOutput(String value);
 		  }
 }
-
