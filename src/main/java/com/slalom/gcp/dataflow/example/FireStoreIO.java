@@ -75,6 +75,7 @@ public class FireStoreIO {
 		final Write<T> spec;
 		Firestore db;
 		WriteBatch batch;
+		static int count = 0;
 
 		public WriteFn(Write<T> spec) {
 			this.spec = spec;
@@ -111,6 +112,15 @@ public class FireStoreIO {
 					db.collection(spec.getCollectionId()).document("Name:" + String.valueOf(Math.random()));
 
 			batch.set(docRef, map);
+			count++;
+			
+			if (count == 100) {
+				batch.commit();
+			}
+			
+			//batch.commit(); --
+			
+			
 			
 		}
 		
