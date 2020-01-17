@@ -1,14 +1,10 @@
 package com.slalom.gcp.dataflow.example;
 import java.beans.PropertyVetoException;
-import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
-import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.jdbc.JdbcIO;
 import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.PipelineOptions;
@@ -16,26 +12,14 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.Validation.Required;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.GroupByKey;
-import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.SimpleFunction;
-import org.apache.beam.sdk.values.PDone;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.FirestoreOptions;
-import com.google.cloud.firestore.WriteBatch;
-import com.google.cloud.firestore.WriteResult;
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 
 
@@ -146,8 +130,12 @@ public class JdbcParallelRead {
 					return mapper.writeValueAsString(objectNode);
 				})
 				)
+		//start
+		.apply(FireStoreIO.write("celtic-list-244219", "employees"))
 		
-		.apply("Build Document", MapElements.via(new SimpleFunction<String, String>() {
+		//end
+		
+/*		.apply("Build Document", MapElements.via(new SimpleFunction<String, String>() {
 			
 		
 			@Override public String apply(String data) { 
@@ -182,8 +170,7 @@ public class JdbcParallelRead {
 				
 				return data; 
 		
-			}
-		}))
+			}})*/
 		;
 
 		p.run();
