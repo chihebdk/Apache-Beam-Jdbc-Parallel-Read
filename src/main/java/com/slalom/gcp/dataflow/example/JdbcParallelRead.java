@@ -131,48 +131,11 @@ public class JdbcParallelRead {
 				)
 		//start
 		.apply(FireStoreIO.write("celtic-list-244219", "employees"))
-		
-		//end
-		
-/*		.apply("Build Document", MapElements.via(new SimpleFunction<String, String>() {
-			
-		
-			@Override public String apply(String data) { 
-			
-				FirestoreOptions firestoreOptions =
-			        FirestoreOptions.getDefaultInstance().toBuilder()
-			            .setProjectId("celtic-list-244219")
-			            .build();
-					    
-				Firestore db = firestoreOptions.getService();
-
-				DocumentReference docRef =
-						 db.collection("employees").document("Name:" + String.valueOf(Math.random()));
-				
-				ObjectMapper mapper = new ObjectMapper();
-				
-				try {
-					
-					 Map<String, String> map = mapper.readValue(data, new TypeReference<Map<String,String>>(){});
-
-					ApiFuture<WriteResult> future = docRef.set(map);
-				
-								
-				
-				} catch (IOException e) {
-					// TODO Auto-generated catch block s
-					LOG.error(e.getMessage());
-				}
-				//ApiFuture<WriteResult> result = docRef.set(data);
-				
-				
-				
-				return data; 
-		
-			}})*/
 		;
 
 		p.run();
+		
+		// {"first": "chiheb", "last": "dkhil"}
 	}
 	
 	  public interface JPOptions extends PipelineOptions {

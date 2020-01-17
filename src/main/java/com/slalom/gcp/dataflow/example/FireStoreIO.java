@@ -117,6 +117,7 @@ public class FireStoreIO {
 			if (count == 100) {
 				batch.commit();
 			}
+			count = 0;
 			
 			//batch.commit(); --
 			
@@ -126,6 +127,7 @@ public class FireStoreIO {
 		
 		 @FinishBundle
 	      public void finishBundle() throws Exception {
+			 if (count == 0) return;
 			 LOG.info( " ----- COMMIT to Firestore -----");
 			 batch.commit();
 		 }
