@@ -6,6 +6,7 @@ import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.DoFn.FinishBundle;
 import org.apache.beam.sdk.transforms.display.DisplayData;
 import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
@@ -75,7 +76,6 @@ public class FireStoreIO {
 		final Write<T> spec;
 		Firestore db;
 		WriteBatch batch;
-		int count = 0;
 
 		public WriteFn(Write<T> spec) {
 			this.spec = spec;
@@ -112,15 +112,13 @@ public class FireStoreIO {
 					db.collection(spec.getCollectionId()).document("Name:" + String.valueOf(Math.random()));
 
 			batch.set(docRef, map);
-			count++;
-
-			//if (count >= Write.DEFAULT_BATCH_SIZE) {
-				
-				batch.commit();
-			//}
-			count = 0;
-
+			
 		}
+		
+		 @FinishBundle
+	      public void finishBundle() throws Exception {
+			 batch.commit();
+		 }
 
 	}
 }
