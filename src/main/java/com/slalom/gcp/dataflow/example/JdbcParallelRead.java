@@ -2,6 +2,7 @@ package com.slalom.gcp.dataflow.example;
 import java.beans.PropertyVetoException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.beam.sdk.Pipeline;
@@ -163,11 +164,15 @@ public class JdbcParallelRead {
 				Firestore db = firestoreOptions.getService();
 
 				DocumentReference docRef =
-						 db.collection("employees").document("Name");
+						 db.collection("employees").document("Name:" + String.valueOf(Math.random()));
 				
-				LOG.info(" thsis is data : " + data);
+				Map<String, Object> docData = new HashMap<>();
+				docData.put("name", "Los Angeles");
+				docData.put("state", "CA");
+				docData.put("country", "USA");
+				ApiFuture<WriteResult> future = db.collection("cities").document("LA").set(docData);
 				
-				ApiFuture<WriteResult> result = docRef.set(data);
+				//ApiFuture<WriteResult> result = docRef.set(data);
 				
 				return data; 
 		
