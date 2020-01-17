@@ -56,7 +56,6 @@ public class JdbcParallelRead {
 
 		String tableName = "employees";
 		int fetchSize = 1000;
-		int count = 0;
 
 		LOG.info(" ********* STARTED **************");
 

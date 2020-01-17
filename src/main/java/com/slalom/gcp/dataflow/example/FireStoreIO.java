@@ -114,9 +114,10 @@ public class FireStoreIO {
 			batch.set(docRef, map);
 			count++;
 
-			if (count >= Write.DEFAULT_BATCH_SIZE) {
+			//if (count >= Write.DEFAULT_BATCH_SIZE) {
+				
 				batch.commit();
-			}
+			//}
 			count = 0;
 
 		}
