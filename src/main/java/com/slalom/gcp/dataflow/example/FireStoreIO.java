@@ -117,6 +117,7 @@ public class FireStoreIO {
 		
 		 @FinishBundle
 	      public void finishBundle() throws Exception {
+			 LOG.info( " ----- COMMIT to Firestore -----");
 			 batch.commit();
 		 }
 
