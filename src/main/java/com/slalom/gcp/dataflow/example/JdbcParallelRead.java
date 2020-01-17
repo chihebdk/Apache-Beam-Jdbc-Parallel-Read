@@ -165,7 +165,6 @@ public class JdbcParallelRead {
 				ObjectMapper mapper = new ObjectMapper();
 				
 				try {
-					String[] list = mapper.readValue(data, String[].class);
 					
 					 Map<String, String> map = mapper.readValue(data, new TypeReference<Map<String,String>>(){});
 
