@@ -133,23 +133,17 @@ public class JdbcParallelRead {
 				.withQuery(String.format("select * from employees.%s where emp_no >= ? and emp_no < ?",tableName))
 				.withRowMapper((JdbcIO.RowMapper<String>) resultSet -> {
 					ObjectMapper mapper = new ObjectMapper();
-					ArrayNode arrayNode = mapper.createArrayNode();
+					ObjectNode objectNode = mapper.createObjectNode();
 					for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
 						String columnTypeIntKey ="";
 						try {
-							ObjectNode objectNode = mapper.createObjectNode();
-							objectNode.put("column_name",
-									resultSet.getMetaData().getColumnName(i));
-
-							objectNode.put("value",
-									resultSet.getString(i));
-							arrayNode.add(objectNode);
+							objectNode.put(resultSet.getMetaData().getColumnName(i), resultSet.getString(i));		
 						} catch (Exception e) {
 							LOG.error("problem columnTypeIntKey: " +  columnTypeIntKey);
 							throw e;
 						}
 					}
-					return mapper.writeValueAsString(arrayNode);
+					return mapper.writeValueAsString(objectNode);
 				})
 				)
 		
@@ -173,12 +167,10 @@ public class JdbcParallelRead {
 				try {
 					String[] list = mapper.readValue(data, String[].class);
 					
-					for (int i = 0; i < list.length; ++i) {
-						
-						Map<String, String> map 
-						  = mapper.readValue(list[i], new TypeReference<Map<String,String>>(){});
-						ApiFuture<WriteResult> future = docRef.set(map);
-					}
+					 Map<String, String> map = mapper.readValue(data, new TypeReference<Map<String,String>>(){});
+
+					ApiFuture<WriteResult> future = docRef.set(map);
+				
 								
 				
 				} catch (IOException e) {
