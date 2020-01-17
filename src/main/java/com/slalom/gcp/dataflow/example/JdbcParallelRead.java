@@ -69,6 +69,7 @@ public class JdbcParallelRead {
 
 		String tableName = "employees";
 		int fetchSize = 1000;
+		int count = 0;
 
 		LOG.info(" ********* STARTED **************");
 
@@ -162,7 +163,7 @@ public class JdbcParallelRead {
 				Firestore db = firestoreOptions.getService();
 
 				DocumentReference docRef =
-						 db.collection("employees").document("Name_" + String.valueOf(Math.random()));
+						 db.collection("employees").document("Name");
 				
 				LOG.info(" thsis is data : " + data);
 				
