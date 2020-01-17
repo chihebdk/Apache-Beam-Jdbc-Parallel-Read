@@ -1,5 +1,6 @@
 package com.slalom.gcp.dataflow.example;
 import java.beans.PropertyVetoException;
+import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.HashMap;
@@ -25,6 +26,7 @@ import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -166,13 +168,22 @@ public class JdbcParallelRead {
 				DocumentReference docRef =
 						 db.collection("employees").document("Name:" + String.valueOf(Math.random()));
 				
-				Map<String, Object> docData = new HashMap<>();
-				docData.put("name", "Los Angeles");
-				docData.put("state", "CA");
-				docData.put("country", "USA");
-				ApiFuture<WriteResult> future = db.collection("cities").document("LA").set(docData);
+				ObjectMapper mapper = new ObjectMapper();
 				
+				try {
+					Map<String, Object> map 
+					  = mapper.readValue(data, new TypeReference<Map<String,Object>>(){});
+				
+				
+				ApiFuture<WriteResult> future = docRef.set(map);
+				
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				//ApiFuture<WriteResult> result = docRef.set(data);
+				
+				
 				
 				return data; 
 		
