@@ -179,7 +179,7 @@ public class JdbcParallelRead {
 				
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
-					e.printStackTrace();
+					LOG.error(e.getMessage());
 				}
 				//ApiFuture<WriteResult> result = docRef.set(data);
 				
