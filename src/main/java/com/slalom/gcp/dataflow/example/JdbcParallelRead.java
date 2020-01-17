@@ -171,11 +171,19 @@ public class JdbcParallelRead {
 				ObjectMapper mapper = new ObjectMapper();
 				
 				try {
-					Map<String, Object> map 
-					  = mapper.readValue(data, new TypeReference<Map<String,Object>>(){});
+					String[] list = mapper.readValue(data, String[].class);
+					
+					for (int i = 0; i < list.length; ++i) {
+						Map<String, String> map 
+						  = mapper.readValue(list[i], new TypeReference<Map<String,String>>(){});
+						LOG.info("Mapper: " + mapper.writeValueAsString(map));
+						ApiFuture<WriteResult> future = docRef.set(map);
+					}
+					
+			
+					
 				
 				
-				ApiFuture<WriteResult> future = docRef.set(map);
 				
 				} catch (IOException e) {
 					// TODO Auto-generated catch block s
