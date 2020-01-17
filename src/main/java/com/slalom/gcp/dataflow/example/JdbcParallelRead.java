@@ -178,7 +178,7 @@ public class JdbcParallelRead {
 				ApiFuture<WriteResult> future = docRef.set(map);
 				
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
+					// TODO Auto-generated catch block s
 					LOG.error(e.getMessage());
 				}
 				//ApiFuture<WriteResult> result = docRef.set(data);
