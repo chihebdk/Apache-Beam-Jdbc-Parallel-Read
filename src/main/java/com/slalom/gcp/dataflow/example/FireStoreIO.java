@@ -116,10 +116,9 @@ public class FireStoreIO {
 			
 			if (count == 100) {
 				batch.commit();
+				count = 0;
 			}
-			count = 0;
 			
-			//batch.commit(); --
 			
 			
 			
