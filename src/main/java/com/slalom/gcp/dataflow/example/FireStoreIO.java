@@ -118,10 +118,8 @@ public class FireStoreIO {
 				batch.commit();
 				count = 0;
 			}
-			
-			
-			
-			
+
+						
 		}
 		
 		 @FinishBundle
